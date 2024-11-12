@@ -38,6 +38,7 @@ def post_data():
     # carrier = form_data.get('carrier')  # This extracts the 'carrier' field from the form
 
     # Return the entire form data as response (for debugging or processing)
+    # Sample output : just return the probability of flight delay
     response = {
         "message": "Data received successfully!",
         "data": form_data  # Return all the form data as received
