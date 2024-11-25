@@ -50,7 +50,7 @@ def convert_to_feature_vector(day_of_month=0, day_of_week=0, dep_del15=0, dep_ti
     Returns:
     - pd.DataFrame: One-hot encoded feature vector
     """
-    # Initialize all columns to 0
+    # Initialize all columns to 0.
     columns = [
         'DAY_OF_MONTH_1', 'DAY_OF_MONTH_2', 'DAY_OF_MONTH_3', 'DAY_OF_MONTH_4',
         'DAY_OF_MONTH_5', 'DAY_OF_MONTH_6', 'DAY_OF_MONTH_7', 'DAY_OF_MONTH_8',
