@@ -89,7 +89,7 @@ def convert_to_feature_vector(day_of_month=0, day_of_week=0, dep_del15=0, dep_ti
     ]
     feature_vector = {col: 0.0 for col in columns}
     
-    # Set the corresponding one-hot encoded values
+    # Set the corresponding one-hot encoded values.
     feature_vector[f'DAY_OF_MONTH_{day_of_month}'] = 1.0
     feature_vector[f'DAY_OF_WEEK_{day_of_week}'] = 1.0
     feature_vector[f'DEP_DEL15_{dep_del15}'] = 1.0
@@ -97,10 +97,10 @@ def convert_to_feature_vector(day_of_month=0, day_of_week=0, dep_del15=0, dep_ti
     feature_vector[f'DISTANCE_cat_{distance_cat}'] = 1.0
     feature_vector[f'ARR_TIME_BLOCK_{time_block(arr_time)}'] = 1.0
     
-    # Convert to a DataFrame
+    # Convert to a DataFrame.
     return pd.DataFrame([feature_vector])
 
-# Helper function to create ARR_TIME_BLOCK
+# Helper function to create ARR_TIME_BLOCK.
 def time_block(x):
 
     if x >= 600 and x <= 659:
@@ -149,7 +149,7 @@ def post_data():
     Flask API endpoint for predicting flight delays using XGBoost model.
     """
     try:
-        # Parse input JSON data
+        # Parse input JSON data.
         request_data = request.get_json()
         day_of_month = request_data.get("day_of_month", 1)  # Default to 1
         day_of_week = request_data.get("day_of_week", 1)    # Default to Monday
@@ -158,7 +158,7 @@ def post_data():
         distance = request_data.get("distance", 300)        # Default to 300 miles
         arr_time = request_data.get("arr_time", 800)        # Default to 8:00 AM
 
-        # Convert input to feature vector
+        # Convert input to feature vector.
         distance_cat = dist_cat(distance)
         feature_vector = convert_to_feature_vector(
             day_of_month=day_of_month,
@@ -169,7 +169,7 @@ def post_data():
             arr_time=arr_time,
         )
 
-        # Ensure feature vector matches the model's expected column order
+        # Ensure feature vector matches the model's expected column order.
         expected_columns = [
         'DAY_OF_MONTH_1', 'DAY_OF_MONTH_2', 'DAY_OF_MONTH_3', 'DAY_OF_MONTH_4',
         'DAY_OF_MONTH_5', 'DAY_OF_MONTH_6', 'DAY_OF_MONTH_7', 'DAY_OF_MONTH_8',
@@ -212,18 +212,18 @@ def post_data():
                 
         feature_vector = feature_vector[expected_columns]
         feature_vector.columns = feature_vector.columns.str.replace(r"[<>\[\],]", "_", regex=True)
-        # Convert feature vector to DMatrix
+        # Convert feature vector to DMatrix.
         dtest_inference = xgb.DMatrix(feature_vector)
 
-        # Load the XGBoost model
+        # Load the XGBoost model.
         xgb_model_inference = xgb.Booster()
         xgb_model_inference.load_model("xgboost_model.json")
 
-        # Perform inference
+        # Perform inference.
         y_pred_prob = xgb_model_inference.predict(dtest_inference)
         y_pred_binary = (y_pred_prob > 0.5).astype(int)
 
-        # Return the prediction
+        # Return the prediction.
         return jsonify({
             "prediction_probability": float(y_pred_prob[0]),
             "prediction_class": int(y_pred_binary[0])
