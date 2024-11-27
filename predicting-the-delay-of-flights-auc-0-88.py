@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 # Importing Libs
@@ -26,7 +26,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-# In[2]:
+# In[ ]:
 
 
 import os
@@ -37,7 +37,7 @@ for dirname, _, filenames in os.walk('/kaggle/input'):
 
 # # Collecting the data
 
-# In[3]:
+# In[ ]:
 
 
 # Collecting data
@@ -83,7 +83,7 @@ df_2019.head()
 # 
 # We will unify the bases of 2019 and 2020 to analyze the data as a whole.
 
-# In[4]:
+# In[ ]:
 
 
 #Creating year indicator.
@@ -100,43 +100,21 @@ print('\n')
 dataset.head()
 
 
-# # Initial data selection.
-# We will select the variables that we will work on to discover patterns in the data.
-#   
-# We will remove all identifiers with the exception 'OP_CARRIER_FL_NUM', which we will transform into an index of our database. The main reason for remove identifiers is that they are irrelevant for analysis.
-
-# In[5]:
+# In[ ]:
 
 
-data = dataset.drop(['OP_UNIQUE_CARRIER','OP_CARRIER_AIRLINE_ID','OP_CARRIER','TAIL_NUM', 'ORIGIN_AIRPORT_ID','ORIGIN_AIRPORT_SEQ_ID','DEST_AIRPORT_ID','DEST_AIRPORT_SEQ_ID','Unnamed: 21'], axis=1)
+data = dataset.drop(['OP_UNIQUE_CARRIER','OP_CARRIER_AIRLINE_ID','OP_CARRIER','TAIL_NUM', 'ORIGIN_AIRPORT_ID','ORIGIN_AIRPORT_SEQ_ID','DEST_AIRPORT_ID','DEST_AIRPORT_SEQ_ID','Unnamed: 21', 'DEP_DEL15'], axis=1)
 data = data.set_index('OP_CARRIER_FL_NUM')
 data.head()
 
 
-# # # Cleaning the dataset / Discretization
-# 
-# Missing values:
-# 
-# Regarding the missing values, considering that they make up 2.5% less of the data, we will adopt the strategy of eliminating them by the line from our database.
-# 
-# Data Type:
-# 
-# We will transform the types of the variables 'DISTANCE', 'ARR_TIME', 'DEP_TIME', 'CANCELED', 'DIVERTED', 'DEP_DEL15', 'ARR_DEL15' to categorical dtype, as they are categorical variables.
-# 
-# Discretization:
-# 
-# We will create distance ranges (categories) for the 'DISTANCE' variable.
-# The advantage is the improvement in the understanding of the knowledge discovered, reduction of the processing time when training some algorithm, and reduction of the search space.
-# 
-# 
-
-# In[6]:
+# In[ ]:
 
 
 data.head()
 
 
-# In[7]:
+# In[ ]:
 
 
 #Dataframe summary
@@ -145,14 +123,14 @@ pd.DataFrame({'unicos':data.nunique(),
               'tipo':data.dtypes})
 
 
-# In[8]:
+# In[ ]:
 
 
 #Missing values
 data.dropna(inplace=True)
 
 #Transformation of data types
-colunas = ['DAY_OF_WEEK','DAY_OF_MONTH','DEP_DEL15','ARR_DEL15','CANCELLED','DIVERTED']
+colunas = ['DAY_OF_WEEK','DAY_OF_MONTH','ARR_DEL15','CANCELLED','DIVERTED']
 for col in colunas:
   data[col] = data[col].astype('category') 
 
@@ -160,7 +138,7 @@ for col in colunas:
 data['DISTANCE_cat'] = pd.qcut(data['DISTANCE'], q=4)
 
 
-# In[9]:
+# In[ ]:
 
 
 #Dataframe summary after pre-processing
@@ -169,128 +147,14 @@ pd.DataFrame({'unicos':data.nunique(),
               'tipo':data.dtypes})
 
 
-# # Exploratory Analysis
-# 
-# Questions we want to answer from the data!
-#   - The concentration of delay and non-delay both on departure and on arrival?
-#   - The proportion of delayed flights that were diverted?
-#   - Are delays due to day_of_week and day_of_month?
-#   - The concentration of delay's by 'DEP_TIME_BLK'?
-#   - Which airport in Origin stands out in delays?
-#   - Which airport in Destination stands out in delays?
-
-# In[10]:
+# In[ ]:
 
 
 #check data
 data.head()
 
 
-# In[11]:
-
-
-#The concentration of delay and timely arrivals both on departure and on arrival?
-f, (ax,ax1) = plt.subplots(1,2, figsize=(12,6))
-dep = sns.countplot(data['DEP_DEL15'], ax=ax)
-dep.set_title('Depatures')
-dep.set_xlabel('Labels')
-dep.set_ylabel('Freq')
-
-arr = sns.countplot(data['ARR_DEL15'], ax=ax1)
-arr.set_title('Arrivals')
-arr.set_xlabel('Labels')
-arr.set_ylabel('Freq')
-
-
-# From the graphs above, we can see a greater concentration of flights with timely departures and arrivals.
-# 
-# Another insight that we can observe is that the proportions are very similar in the two variables, that is, it is very likely that the departures or not in delay are very important for predictive modeling about delayed arrivals.
-
-# In[12]:
-
-
-# Percentage of delayed flights that are canceled or diverted?
-voos_atrasados = data.loc[data['ARR_DEL15'] == 1,['DIVERTED']]
-
-
-f, ax= plt.subplots(figsize=(12,6))
-
-#Desvios
-desv = sns.countplot(voos_atrasados['DIVERTED'], ax=ax)
-desv.set_title('Diverted Flights')
-desv.set_xlabel('Labels')
-desv.set_ylabel('Freq')
-
-
-# As we can see any flight with delay was diverted.
-
-# In[13]:
-
-
-# Delays due to day_of_week and day_of_month?
-
-week = data[['DAY_OF_WEEK','ARR_DEL15']].groupby('DAY_OF_WEEK').sum().sort_values(by='ARR_DEL15',ascending=False)
-week['PERCENTUAL'] = week['ARR_DEL15']/(week['ARR_DEL15'].sum())*100
-month = data[['DAY_OF_MONTH','ARR_DEL15']].groupby('DAY_OF_MONTH').sum().sort_values(by='ARR_DEL15',ascending=False)
-month['PERCENTUAL'] = month['ARR_DEL15']/(month['ARR_DEL15'].sum())*100
-
-print('>> Delayed flights by weekday<<')
-print(week)
-print('\n')
-print('>> Delayed flights by monthday <<')
-print(month)
-
-
-# Day of week 4 (Wednesday) has the highest incidence of delays.
-# 
-# Regarding the days of the month, although more distributed, the 24th and 2nd are the ones that stand out.
-
-# In[14]:
-
-
-# Concentration of delays due to 'DEP_TIME_BLK'?
-time_blk = data[['DEP_TIME_BLK','ARR_DEL15']].groupby('DEP_TIME_BLK').sum().sort_values(by='ARR_DEL15',ascending=False)
-time_blk['PERCENTUAL'] = time_blk['ARR_DEL15']/(time_blk['ARR_DEL15'].sum())*100
-time_blk
-
-
-# Most delays occur between 4:00 pm and 7:00 pm, in the late afternoon.
-
-# In[15]:
-
-
-# Which 'Origin' airport stands out in delay?
-origin_later = data[['ORIGIN','DEP_DEL15']].groupby('ORIGIN').sum().sort_values(by='DEP_DEL15',ascending=False)
-origin_later['PERCENTUAL'] = origin_later['DEP_DEL15']/(origin_later['DEP_DEL15'].sum())*100
-origin_later.head()
-
-
-# We note that ORD (Chicago O'Hare International Airport) and DFW (Dallas / Ft Worth, TX, USA - Dallas Ft Worth International) airports are the ones with the most delays.
-
-# In[16]:
-
-
-# Which airport of Destination stands out in delays?
-dest_later = data[['DEST','ARR_DEL15']].groupby('DEST').sum().sort_values(by='ARR_DEL15',ascending=False)
-dest_later['PERCENTUAL'] = dest_later['ARR_DEL15']/(dest_later['ARR_DEL15'].sum())*100
-dest_later.head()
-
-
-# Interestingly, the same airports with the longest delays at origin are also the ones with the highest delays at destination airports. In the modeling stage, we can perform the OneHotEncoder and maintain only the 3 to 5 largest airports to avoid high dimensionality.
-
-# # Creating Variables
-# 
-# Through the analysis of the first graph of the exploratory analysis, we had the insight that the delays in the departure of the flights (DEP_DEL15) can help us to model the delays in the arrival (ARR_DEL15) of the flights. That way we can create related variables as below.
-# 
-# -We can create ARR_TIME_BLOCK.
-# 
-# -The number of delays within a DEP_TIME_BLK.
-# 
-# -The number of delays DEP_DEL15 per ORIGIN.
-# 
-# -The number of delays ARR_DEL15 per DEST.
-
-# In[17]:
+# In[ ]:
 
 
 # Helper function to create ARR_TIME_BLOCK
@@ -336,7 +200,7 @@ def arr_time(x):
     return '2300-2400'
 
 
-# In[18]:
+# In[ ]:
 
 
 # We can create ARR_TIME_BLOCK.
@@ -346,7 +210,7 @@ data.reset_index(inplace=True)
 data.head()
 
 
-# In[19]:
+# In[ ]:
 
 
 # Amount of delays within a DEP_TIME_BLK.
@@ -358,19 +222,19 @@ data1.rename({'ARR_DEL15_y':'quant_dep_time_blk','ARR_DEL15_x':'ARR_DEL15' }, in
 data1.head()
 
 
-# In[20]:
+# In[ ]:
 
 
 # Number of delays DEP_DEL15 per ORIGIN.
-count_later_origin = data[['ORIGIN','DEP_DEL15']].groupby('ORIGIN').sum().sort_values(by='DEP_DEL15',ascending=False)
+count_later_origin = data[['ORIGIN']].groupby('ORIGIN').sum()
 count_later_origin.reset_index(inplace=True)
 count_later_origin.head()
 data2 = data1.merge(count_later_origin, left_on='ORIGIN', right_on='ORIGIN')
-data2.rename({'DEP_DEL15_y':'count_later_origin','DEP_DEL15_x':'DEP_DEL15' }, inplace=True, axis=1)
+data2.rename({'DEP_DEL15_y':'count_later_origin' }, inplace=True, axis=1)
 data2.head() 
 
 
-# In[21]:
+# In[ ]:
 
 
 # Number of delays ARR_DEL15 per DEST.
@@ -379,13 +243,10 @@ count_later_dest.reset_index(inplace=True)
 count_later_dest.head()
 data3 = data2.merge(count_later_dest, left_on='DEST', right_on='DEST')
 data3.rename({'ARR_DEL15_y':'count_later_dest','ARR_DEL15_x':'ARR_DEL15' },inplace=True, axis=1)
-data3.head() 
+data3.head()
 
 
-# # Training Final Model
-# For training the final model, we will train the model on the 2019 data and use the 2020 data for validation. Such an approach makes sense since we have data for January of each year and we can predict what will happen in January of the following year.
-
-# In[22]:
+# In[ ]:
 
 
 #Data Preparation
@@ -394,7 +255,7 @@ base_final.drop(['DEP_TIME','ARR_TIME','OP_CARRIER_FL_NUM'], inplace=True, axis=
 base_final.set_index('year',inplace=True)
 
 
-# In[23]:
+# In[ ]:
 
 
 # Separate target, numeric and categorical variables 'ORIGIN', 'DEST'
@@ -402,7 +263,7 @@ base_final.set_index('year',inplace=True)
 target_final = base_final[['ARR_DEL15']]
 
 cat_vars_final = base_final.select_dtypes(['object','category'])
-cat_vars_final = cat_vars_final.loc[:, ['DAY_OF_MONTH', 'DAY_OF_WEEK','DEP_DEL15','DEP_TIME_BLK','CANCELLED',
+cat_vars_final = cat_vars_final.loc[:, ['DAY_OF_MONTH', 'DAY_OF_WEEK','DEP_TIME_BLK','CANCELLED',
                             'DIVERTED','DISTANCE_cat','ARR_TIME_BLOCK']]
 
 #One Hot Encoder
@@ -414,7 +275,7 @@ cat_vars_ohe_final = pd.DataFrame(cat_vars_ohe_final, index= cat_vars_final.inde
                       columns=enc.get_feature_names(cat_vars_final.columns.tolist()))
 
 
-# In[24]:
+# In[ ]:
 
 
 #Logisitc Regression Model
@@ -428,87 +289,217 @@ cat_vars_ohe_2019_final = cat_vars_ohe_final[cat_vars_ohe_final.index == 2019]
 cat_vars_ohe_2020_final = cat_vars_ohe_final[cat_vars_ohe_final.index == 2020]
 
 
-#Instantizing Model
-lr_model_final = LogisticRegression(C=1.0,n_jobs=-1,verbose=1, random_state=154)
-
-#training
-lr_model_final.fit(cat_vars_ohe_2019_final, target_2019_final)
+# In[ ]:
 
 
-# ## Evaluation of the Final Model
-# The average AUC in training data was 0.89, we can see that dividing the data by time (2019.2020) generated a good increase in our control metric.
+
+
+
+# In[ ]:
+
+
+get_ipython().system('pip install xgboost')
+
+
+# In[ ]:
+
+
+from sklearn.metrics import classification_report, roc_auc_score, roc_curve
+import numpy as np
+import xgboost as xgb
+
+
+# In[ ]:
+
+
+# Ensure target variables are integers
+target_2019_final = target_2019_final.astype(int)
+target_2020_final = target_2020_final.astype(int)
+
+
+# In[ ]:
+
+
+cat_vars_ohe_2019_final.head()
+
+
+# In[ ]:
+
+
+cat_vars_ohe_2019_final.columns
+
+
+# In[ ]:
+
+
+# Fix feature names after one-hot encoding
+cat_vars_ohe_2019_final.columns = [
+    col.replace("[", "").replace("]", "").replace("<", "").replace(",", "_")
+    for col in cat_vars_ohe_2019_final.columns
+]
+
+cat_vars_ohe_2020_final.columns = [
+    col.replace("[", "").replace("]", "").replace("<", "").replace(",", "_")
+    for col in cat_vars_ohe_2020_final.columns
+]
+
+
+# In[ ]:
+
+
+# Convert to DMatrix format for XGBoost
+dtrain = xgb.DMatrix(cat_vars_ohe_2019_final, label=target_2019_final)
+dtest = xgb.DMatrix(cat_vars_ohe_2020_final, label=target_2020_final)
+
+# Calculate scale_pos_weight to address class imbalance
+scale_pos_weight = len(target_2019_final[target_2019_final == 0]) / len(target_2019_final[target_2019_final == 1])
+
+# Define optimized XGBoost parameters
+params = {
+    "objective": "binary:logistic",
+    "eval_metric": "auc",
+    "learning_rate": 0.01,  # Lower learning rate for better generalization
+    "max_depth": 4,        # Reduce depth to prevent overfitting
+    "min_child_weight": 5, # Regularization to avoid overfitting
+    "subsample": 0.8,      # Row sampling
+    "colsample_bytree": 0.8, # Feature sampling
+    "scale_pos_weight": scale_pos_weight,  # Adjust for class imbalance
+    "gamma": 1,            # Minimum loss reduction for split
+    "reg_lambda": 1,       # L2 regularization
+    "seed": 42             # Ensure reproducibility
+}
+
+
+# In[ ]:
+
+
+# from sklearn.model_selection import GridSearchCV
+# from xgboost import XGBClassifier
+
+# param_grid = {
+#     'max_depth': [3, 4, 5],
+#     'learning_rate': [0.01, 0.05, 0.1],
+#     'n_estimators': [100, 200, 300],
+#     'scale_pos_weight': [1, scale_pos_weight]
+# }
+
+# grid_search = GridSearchCV(
+#     estimator=XGBClassifier(),
+#     param_grid=param_grid,
+#     scoring='roc_auc',
+#     cv=3,
+#     verbose=1,
+#     n_jobs=-1
+# )
+
+# grid_search.fit(cat_vars_ohe_2019_final, target_2019_final)
+# best_model = grid_search.best_estimator_
+# print(f"Best parameters: {grid_search.best_params_}")
+
+
+# In[ ]:
+
+
+# Train the XGBoost model with early stopping
+evals_result = {}
+xgb_model = xgb.train(
+    params=params,
+    dtrain=dtrain,
+    num_boost_round=500,  # Allow more rounds
+    evals=[(dtrain, "train"), (dtest, "validation")],
+    early_stopping_rounds=50,  # Stop if validation AUC does not improve
+    evals_result=evals_result,
+    verbose_eval=True
+)
+
+
+# In[ ]:
+
+
+# Make predictions
+y_pred_prob = xgb_model.predict(dtest)
+y_pred = (y_pred_prob > 0.5).astype(int)
+
+
+# In[ ]:
+
+
+# Evaluate classification performance
+print("Classification Report:")
+print(classification_report(target_2020_final, y_pred))
+print(f"AUC: {roc_auc_score(target_2020_final, y_pred_prob):.4f}")
+
+
+# In[ ]:
+
+
+# Find and use the optimal threshold
+fpr, tpr, thresholds = roc_curve(target_2020_final, y_pred_prob)
+optimal_idx = np.argmax(tpr - fpr)
+optimal_threshold = thresholds[optimal_idx]
+print(f"Optimal Threshold: {optimal_threshold}")
+
+
+# In[ ]:
+
+
+y_pred_optimal = (y_pred_prob > optimal_threshold).astype(int)
+print("Classification Report with Optimal Threshold:")
+print(classification_report(target_2020_final, y_pred_optimal))
+print(f"AUC with Optimal Threshold: {roc_auc_score(target_2020_final, y_pred_prob):.4f}")
+
+
+# In[ ]:
+
+
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
+
+# Get predicted probabilities
+y_pred_prob = xgb_model.predict(dtest)
+
+# Compute FPR, TPR, and thresholds
+fpr, tpr, thresholds = roc_curve(target_2020_final, y_pred_prob)
+
+# Calculate AUC
+roc_auc = auc(fpr, tpr)
+
+# Plot ROC Curve
+plt.figure(figsize=(10, 6))
+plt.plot(fpr, tpr, label=f"XGBoost ROC Curve (AUC = {roc_auc:.4f})", color="blue")
+plt.plot([0, 1], [0, 1], linestyle="--", color="red", label="Random Guess")
+plt.title("ROC Curve for XGBoost Model")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.legend(loc="lower right")
+plt.grid(alpha=0.3)
+plt.show()
+
+
+# In[ ]:
+
+
+xgb_model.save_model("xgboost_model.json")
+from IPython.display import FileLink
+
+# Generate a download link
+FileLink("xgboost_model.json")
+
+
+# # Load the model in JSON format
+# xgb_model_inference = xgb.Booster()
+# xgb_model_inference.load_model("xgboost_model.json")
 # 
-# For the test data, the AUC fell slightly 0.88 which is very good, it indicates that we are not suffering from overfitting. However, if we analyze the recall we observe the value of 0.73, that is, of all 'delay' events we are correctly classifying 73% of our target category.
+# # Optional: Load from a pickle file
+# with open("xgboost_model.pkl", "rb") as f:
+#     xgb_model_inference = pickle.load(f)
+#     
+# # Prepare inference data as DMatrix
+# dtest_inference = xgb.DMatrix(cat_vars_ohe_2020_final)  # Use one-hot encoded test data
 # 
-# If it is very important to have a better performance in classifying our target category (for example if we were talking about classifying diseases), we could evaluate the threshold and favor the recall over precision, in this way, we would start to classify many flights that do not would delay, however, we would get right most of the delays.
-
-# In[25]:
-
-
-#Validação Cruzada -Treino
-cv = StratifiedKFold(n_splits=3, shuffle=True)
-result = cross_val_score(lr_model_final,cat_vars_ohe_2019_final,target_2019_final, cv=cv, scoring='roc_auc', n_jobs=-1)
-print(f'A média: {np.mean(result)}')
-print(f'Limite Inferior: {np.mean(result)-2*np.std(result)}')
-print(f'Limite Superior: {np.mean(result)+2*np.std(result)}')
-
-
-# In[26]:
-
-
-#Test Data
-
-# Predict
-pred = lr_model_final.predict(cat_vars_ohe_2020_final)
-pred_prob = lr_model_final.predict_proba(cat_vars_ohe_2020_final)
-
-# print classification report
-print("Relatório de Classificação:\n", 
-       classification_report(target_2020_final, pred, digits=4))
-
-# print the area under the curve
-print(f'AUC: {roc_auc_score(target_2020_final,pred_prob[:,1])}')
-
-
-# In[27]:
-
-
-#ROC Curve
-from yellowbrick.classifier import ROCAUC
-visualizer = ROCAUC(lr_model_final, classes=["nao_atraso", "atraso"])
-
-visualizer.fit(cat_vars_ohe_2019_final, target_2019_final)         
-visualizer.score(cat_vars_ohe_2020_final, target_2020_final)                                   
-visualizer.show() 
-
-
-# The ROC curve is a measure of performance for classification problems at different thresholds.
+# # Make predictions
+# y_pred_inference = xgb_model_inference.predict(dtest_inference)
+# y_pred_binary = (y_pred_inference > 0.5).astype(int)
 # 
-# Through the ROC curves above, we can see that our model has, in general, a true positive rate for class 0.0 higher than for our target category. However, with low thresholds, we observed a high TPR for our target class with a low FPR, that is, at a low threshold our model would be able to distinguish the positive class with greater success.
-
-# In[28]:
-
-
-from yellowbrick.classifier import precision_recall_curve
-viz = precision_recall_curve(lr_model_final, cat_vars_ohe_2019_final, target_2019_final, cat_vars_ohe_2020_final, target_2020_final)
-
-
-# The plot above shows us the trade-off between precision and recall. If we seek a greater recall, to favor our positive class, we will sacrifice the precision of the model.
-
-# Manipulating the threshold
-# Many classifiers use a decision_function to generate a positive class score or the predict_proba function to compute the probability of the positive class. If the score or probability is higher than the threshold then the positive class is selected, otherwise, the negative class is selected.
-# 
-# Here in our case we manipulate the threshold, use the value of -3, compared to the score generated by the decision_function (distance to a 'hyperplane' of equal probabilities for the classes) and we obtained a recall of 0.94, that is, we would hit 94% of our positive class, however, at the cost of having a precision of only 18%.
-
-# In[29]:
-
-
-y_scores_final = lr_model_final.decision_function(cat_vars_ohe_2020_final)
-y_pred_recall = (y_scores_final > -3)
-
-print(f'New precision: {precision_score(target_2020_final,y_pred_recall)}')
-print(f'New recall: {recall_score(target_2020_final,y_pred_recall)}')
-
-
-# # Conclusion
-# We conclude that the variable 'DEP_DEL15' is the most relevant for understanding flights that arrive late to their destination. Acting on the causes of flight departure delays would already prevent any delays. Modeling only with categorical variables we can obtain an AUC of 0.88 on test data, additionally, we observed that we could achieve 94% accuracy on the positive class by manipulating the threshold of our model, at the cost of classifying many non-delays as delays.
+# # Output results
+# print("Predictions:", y_pred_binary)
